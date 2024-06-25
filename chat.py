@@ -1,34 +1,33 @@
-from loguru import logger
+from abc import ABC
 from openai import OpenAI
+from loguru import logger
 
 
-class RomanticChat:
-    def __init__(self, client: OpenAI, own_name: str, partner_name: str, model: str = "gpt-3.5-turbo") -> None:
-        self.own_name = own_name
-        self.partner_name = partner_name
-        
+class Chat(ABC):
+    def __init__(self, client: OpenAI, system_message: str = "You are a helpful assistant!", model: str = "gpt-3.5-turbo") -> None:
         self.client = client
         self.model = model
         self.total_tokens_used = 0
         self.messages = [
             {
                 "role": "system",
-                "content": f"Du heißt {own_name} und hast eine romantische Beziehung zu {partner_name}.",
+                "content": system_message,
             }
         ]
-    
-    def send_message(self, message: str) -> str:
-        """ Sends a message to the partner
+
+
+    def make_request(self, promt: str) -> str:
+        """ Makes a request to openai and returns the answer
         Args:
-            message (str): The message to be sent to the partner.
+            promt (str): The promt to be sent.
         Returns:
-            str: The response from the partner.
+            str: The response from openai.
         """
         # Add new message to history
         self.messages.append(
             {
                 "role": "user",
-                "content": message
+                "content": promt
             }
         )
 
@@ -41,7 +40,7 @@ class RomanticChat:
             self.total_tokens_used += chat_completion.usage.total_tokens
             response = chat_completion.choices[0].message.content
 
-            # Save response to chat
+            # Save response to history
             self.messages.append(
                 {
                     "role": "assistant",
@@ -52,6 +51,7 @@ class RomanticChat:
         except Exception as e:
             logger.error("Request to openai failed due to:\n" + str(e))
             return "An error has been occured while making an openai request!"
+
 
     def save_log(self) -> None:
         """ Appends the message history and the total tokens used to a log file. Creates the file if not exists.
